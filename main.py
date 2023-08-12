@@ -14,7 +14,7 @@ bot = commands.Bot(command_prefix=prefixes, intents=intent_used)
 bot_statuses = cycle(["У моего создателя самые кривые руки", "Нил Сисирига!", "*Стикер солдат*", "По запросу 'ТЗ' "
                                                                                                  "ничего не найдено"])
 
-TOKEN = "MTEzODg1OTI1MzI4OTk5MjIwMg.GEj6Gq.AUCgi7Wcc9zxjagLjcmCQ9MgAWo8zQ0UCaCswE"
+TOKEN = ""
 
 
 @tasks.loop(seconds=3)
