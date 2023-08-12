@@ -11,9 +11,29 @@ class Team:
         self.tag = tag
 
 
+class MapBanButton(discord.ui.Button):
+    def __init__(self, label, row):
+        super().__init__(label=label, style=discord.ButtonStyle.primary, row=row)
+
+    async def callback(self, interaction: discord.Interaction):
+        self.view.bannedMapsNumbers += " [" + self.label + "] "
+        self.view.bannedMapsCounter += 1
+        self.disabled = True
+        self.style = discord.ButtonStyle.grey
+        if self.view.bannedMapsCounter == 2 or self.view.bannedMapsCounter == 5:
+            maps_banned_embed = discord.Embed(
+                title=f"{interaction.user.name} Забанил карты:  ***{self.view.bannedMapsNumbers}***",
+                colour=discord.Colour.red())
+            await interaction.response.edit_message(view=self.view)
+            await interaction.response.send_message(embed=maps_banned_embed)
+            self.view.bannedMapsNumbers = ""
+        await interaction.response.edit_message(view=self.view)
+
 class MapsView(discord.ui.View):
     def __init__(self):
         super().__init__()
+        self.add_item(MapBanButton("BTN", 1))
+
     mode = ''
     imageUrls = {
         "Мегакарп": "https://media.discordapp.net/attachments/1138780111416606782/1139581216518045817/rainmaker-maps-no-numbers.png?width=875&height=600",
@@ -22,7 +42,7 @@ class MapsView(discord.ui.View):
         "Бой за Зоны": "https://media.discordapp.net/attachments/1138780111416606782/1139581217306574989/zone-maps-no-numbers.png?width=850&height=558"
     }
     bannedMapsCounter = 0
-    bannedMapsNumbers = "[1] [2]"
+    bannedMapsNumbers = ""
 
     def createMapBanButton(self, number: str, row=1):
         @discord.ui.button(label=number, style=discord.ButtonStyle.primary, row=row)
@@ -40,9 +60,8 @@ class MapsView(discord.ui.View):
             button.disabled = True
             button.style = discord.ButtonStyle.grey
             await interaction.response.edit_message(view=self)
-        return mapBanButton
 
-    first = createMapBanButton("123456789", 2345678, 2)
+        return mapBanButton
 
     @discord.ui.button(label="map2", style=discord.ButtonStyle.primary, row=1)
     async def fdv(self, interaction: discord.Interaction, button: discord.ui.Button):
