@@ -20,19 +20,33 @@ class MapBanButton(discord.ui.Button):
         self.view.bannedMapsCounter += 1
         self.disabled = True
         self.style = discord.ButtonStyle.grey
-        if self.view.bannedMapsCounter == 2 or self.view.bannedMapsCounter == 5:
+        if self.view.bannedMapsCounter == 6:
+            map_choosed_embed = discord.Embed(
+                title=f"***ИМЯ КОМАНДЫ С НИЗКИМ СИДОМ*** выбрали карту:  ***{self.view.bannedMapsNumbers}***",
+                color= discord.Color.dark_teal()
+            )
+            await interaction.response.send_message(embed=map_choosed_embed)
+            self.view.stop()
+        elif self.view.bannedMapsCounter == 2 or self.view.bannedMapsCounter == 5:
             maps_banned_embed = discord.Embed(
                 title=f"{interaction.user.name} Забанил карты:  ***{self.view.bannedMapsNumbers}***",
                 colour=discord.Colour.red())
-            await interaction.response.edit_message(view=self.view)
             await interaction.response.send_message(embed=maps_banned_embed)
             self.view.bannedMapsNumbers = ""
         await interaction.response.edit_message(view=self.view)
 
+
 class MapsView(discord.ui.View):
     def __init__(self):
         super().__init__()
-        self.add_item(MapBanButton("BTN", 1))
+        self.add_item(MapBanButton("1", 1))
+        self.add_item(MapBanButton("2", 1))
+        self.add_item(MapBanButton("3", 1))
+        self.add_item(MapBanButton("4", 1))
+        self.add_item(MapBanButton("5", 2))
+        self.add_item(MapBanButton("6", 2))
+        self.add_item(MapBanButton("7", 2))
+        self.add_item(MapBanButton("8", 2))
 
     mode = ''
     imageUrls = {
@@ -44,154 +58,43 @@ class MapsView(discord.ui.View):
     bannedMapsCounter = 0
     bannedMapsNumbers = ""
 
-    def createMapBanButton(self, number: str, row=1):
-        @discord.ui.button(label=number, style=discord.ButtonStyle.primary, row=row)
-        async def mapBanButton(interaction: discord.Interaction, button: discord.ui.Button):
-            self.bannedMapsNumbers += " [" + button.label + "] "
-            self.bannedMapsCounter += 1
-            if self.bannedMapsCounter == 2 or self.bannedMapsCounter == 5:
-                maps_banned_embed = discord.Embed(
-                    title=f"{interaction.user.name} Забанил карты:  ***{self.bannedMapsNumbers}***",
-                    colour=discord.Colour.red())
-                button.disabled = True
-                button.style = discord.ButtonStyle.grey
-                await interaction.response.send_message(embed=maps_banned_embed)
-                self.bannedMapsNumbers = ""
-            button.disabled = True
-            button.style = discord.ButtonStyle.grey
-            await interaction.response.edit_message(view=self)
 
-        return mapBanButton
+class ModeBanButton(discord.ui.Button):
+    def __init__(self, label, style):
+        super().__init__(label=label, style=style)
 
-    @discord.ui.button(label="map2", style=discord.ButtonStyle.primary, row=1)
-    async def fdv(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.bannedMapsNumbers += " [" + button.label + "] "
-        self.bannedMapsCounter += 1
-        if self.bannedMapsCounter == 2 or self.bannedMapsCounter == 5:
-            maps_banned_embed = discord.Embed(
-                title=f"{interaction.user.name} Забанил карты:  ***{self.bannedMapsNumbers}***",
-                colour=discord.Colour.red())
-            button.disabled = True
-            button.style = discord.ButtonStyle.grey
-            await interaction.response.send_message(embed=maps_banned_embed)
-            self.bannedMapsNumbers = ""
-        button.disabled = True
-        button.style = discord.ButtonStyle.grey
-        await interaction.response.edit_message(view=self)
-
-    @discord.ui.button(label="map1", style=discord.ButtonStyle.primary, row=1)
-    async def fdwrv(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.bannedMapsNumbers += " [" + button.label + "] "
-        self.bannedMapsCounter += 1
-        if self.bannedMapsCounter == 2 or self.bannedMapsCounter == 5:
-            maps_banned_embed = discord.Embed(
-                title=f"{interaction.user.name} Забанил карты:  ***{self.bannedMapsNumbers}***",
-                colour=discord.Colour.red())
-            button.disabled = True
-            button.style = discord.ButtonStyle.grey
-            await interaction.response.send_message(embed=maps_banned_embed)
-            self.bannedMapsNumbers = ""
-        button.disabled = True
-        button.style = discord.ButtonStyle.grey
-        await interaction.response.edit_message(view=self)
+    async def callback(self, interaction: discord.Interaction):
+        if self.view.bannedMode != "" and self.view.bannedMode != self.label:
+            mapView = MapsView()
+            mapView.mode = self.label
+            choose_embed = discord.Embed(title=f"{interaction.user.name} Выбрал режим:  ***{mapView.mode}***",
+                                         description="***ИМЯ КОМАНДЫ С НИЗКИМ СИДОМ*** должна забанить 2 из 8"
+                                                     " карт нажав на сответствующие кнопки\n"
+                                                     "Далее ***ИМЯ КОМАНДЫ С ВЫСОКИМ СИДОМ*** банит 3 карты из оставшихся\n"
+                                                     "После чего ***ИМЯ КОМАНДЫ С НИЗКИМ СИДОМ*** выбирает карту из 3-х оставшихся",
+                                         colour=discord.Colour.blurple())
+            choose_embed.set_image(url=mapView.imageUrls[mapView.mode])
+            await interaction.response.send_message(embed=choose_embed, view=mapView)
+            self.view.stop()
+        elif self.view.bannedMode != self.label:
+            self.view.bannedMode = self.label
+            ban_action_embed = discord.Embed(title=f"{interaction.user.name} Забанил режим:  ***{self.view.bannedMode}***",
+                                             colour=discord.Colour.red())
+            await interaction.response.send_message(embed=ban_action_embed)
+        else:
+            await interaction.response.send_message(
+                f"{interaction.user.name}, этот режим уже был забанен, **ITS NO USE!**")
 
 
 class ModesView(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+        self.add_item(ModeBanButton("Мегакарп", discord.ButtonStyle.primary))
+        self.add_item(ModeBanButton("Бой за Башню", discord.ButtonStyle.green))
+        self.add_item(ModeBanButton("Устробол", discord.ButtonStyle.secondary))
+        self.add_item(ModeBanButton("Бой за Зоны", discord.ButtonStyle.red))
+
     bannedMode = ""
-
-    @discord.ui.button(label="Мегакарп", style=discord.ButtonStyle.primary)
-    async def RainmakerButton(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.bannedMode != "" and self.bannedMode != "Мегакарп":
-            mapView = MapsView()
-            mapView.mode = "Мегакарп"
-            choose_embed = discord.Embed(title=f"{interaction.user.name} Выбрал режим:  ***{mapView.mode}***",
-                                         description="***ИМЯ КОМАНДЫ С НИЗКИМ СИДОМ*** должна забанить 2 из 8"
-                                                     " карт нажав на сответствующие кнопки\n"
-                                                     "Далее ***ИМЯ КОМАНДЫ С ВЫСОКИМ СИДОМ*** банит 3 карты из оставшихся\n"
-                                                     "После чего ***ИМЯ КОМАНДЫ С НИЗКИМ СИДОМ*** выбирает карту из 3-х оставшихся",
-                                         colour=discord.Colour.blurple())
-            choose_embed.set_image(url=mapView.imageUrls[mapView.mode])
-            await interaction.response.send_message(embed=choose_embed, view=mapView)
-            self.stop()
-        elif self.bannedMode != "Мегакарп":
-            self.bannedMode = "Мегакарп"
-            ban_action_embed = discord.Embed(title=f"{interaction.user.name} Забанил режим:  ***{self.bannedMode}***",
-                                             colour=discord.Colour.red())
-            await interaction.response.send_message(embed=ban_action_embed)
-        else:
-            # await interaction.response.send_message(view=mapView)
-            await interaction.response.send_message(
-                f"{interaction.user.name}, этот режим уже был забанен, **ITS NO USE!**")
-
-    @discord.ui.button(label="Бой за Башню", style=discord.ButtonStyle.success)
-    async def TowerControlButton(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.bannedMode != "" and self.bannedMode != "Бой за Башню":
-            mapView = MapsView()
-            mapView.mode = "Бой за Башню"
-            choose_embed = discord.Embed(title=f"{interaction.user.name} Выбрал режим:  ***{mapView.mode}***",
-                                         description="***ИМЯ КОМАНДЫ С НИЗКИМ СИДОМ*** должна забанить 2 из 8"
-                                                     " карт нажав на сответствующие кнопки\n"
-                                                     "Далее ***ИМЯ КОМАНДЫ С ВЫСОКИМ СИДОМ*** банит 3 карты из оставшихся\n"
-                                                     "После чего ***ИМЯ КОМАНДЫ С НИЗКИМ СИДОМ*** выбирает карту из 3-х оставшихся",
-                                         colour=discord.Colour.blurple())
-            choose_embed.set_image(url=mapView.imageUrls[mapView.mode])
-            await interaction.response.send_message(embed=choose_embed, view=mapView)
-            self.stop()
-        elif self.bannedMode != "Бой за Башню":
-            self.bannedMode = "Бой за Башню"
-            ban_action_embed = discord.Embed(title=f"{interaction.user.name} Забанил режим:  ***{self.bannedMode}***",
-                                             colour=discord.Colour.red())
-            await interaction.response.send_message(embed=ban_action_embed)
-        else:
-            await interaction.response.send_message(
-                f"{interaction.user.name}, этот режим уже был забанен, **ITS NO USE!**")
-
-    @discord.ui.button(label="Устробол", style=discord.ButtonStyle.secondary)
-    async def ClamBlitzButton(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.bannedMode != "" and self.bannedMode != "Устробол":
-            mapView = MapsView()
-            mapView.mode = "Устробол"
-            choose_embed = discord.Embed(title=f"{interaction.user.name} Выбрал режим:  ***{mapView.mode}***",
-                                         description="***ИМЯ КОМАНДЫ С НИЗКИМ СИДОМ*** должна забанить 2 из 8"
-                                                     " карт нажав на сответствующие кнопки\n"
-                                                     "Далее ***ИМЯ КОМАНДЫ С ВЫСОКИМ СИДОМ*** банит 3 карты из оставшихся\n"
-                                                     "После чего ***ИМЯ КОМАНДЫ С НИЗКИМ СИДОМ*** выбирает карту из 3-х оставшихся",
-                                         colour=discord.Colour.blurple())
-            choose_embed.set_image(url=mapView.imageUrls[mapView.mode])
-            await interaction.response.send_message(embed=choose_embed, view=mapView)
-            self.stop()
-        elif self.bannedMode != "Устробол":
-            self.bannedMode = "Устробол"
-            ban_action_embed = discord.Embed(title=f"{interaction.user.name} Забанил режим:  ***{self.bannedMode}***",
-                                             colour=discord.Colour.red())
-            await interaction.response.send_message(embed=ban_action_embed)
-        else:
-            await interaction.response.send_message(
-                f"{interaction.user.name}, этот режим уже был забанен, **ITS NO USE!**")
-
-    @discord.ui.button(label="Бой за Зоны", style=discord.ButtonStyle.red)
-    async def SplatZonesButton(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.bannedMode != "" and self.bannedMode != "Бой за Зоны":
-            mapView = MapsView()
-            mapView.mode = "Бой за Зоны"
-            choose_embed = discord.Embed(title=f"{interaction.user.name} Выбрал режим:  ***{mapView.mode}***",
-                                         description="***ИМЯ КОМАНДЫ С НИЗКИМ СИДОМ*** должна забанить 2 из 8"
-                                                     " карт нажав на сответствующие кнопки\n"
-                                                     "Далее ***ИМЯ КОМАНДЫ С ВЫСОКИМ СИДОМ*** банит 3 карты из оставшихся\n"
-                                                     "После чего ***ИМЯ КОМАНДЫ С НИЗКИМ СИДОМ*** выбирает карту из 3-х оставшихся",
-                                         colour=discord.Colour.blurple())
-            choose_embed.set_image(url=mapView.imageUrls[mapView.mode])
-            await interaction.response.send_message(embed=choose_embed, view=mapView)
-            self.stop()
-        elif self.bannedMode != "Бой за Зоны":
-            self.bannedMode = "Бой за Зоны"
-            ban_action_embed = discord.Embed(title=f"{interaction.user.name} Забанил режим:  ***{self.bannedMode}***",
-                                             colour=discord.Colour.red())
-            await interaction.response.send_message(embed=ban_action_embed)
-        else:
-            await interaction.response.send_message(
-                f"{interaction.user.name}, этот режим уже был забанен, **ITS NO USE!**")
-
 
 class PickBan(commands.Cog):
     def __init__(self, bot):
@@ -202,9 +105,10 @@ class PickBan(commands.Cog):
         print("PickBan - online")
 
     @app_commands.command(name="start", description="Начать процесс выбора карты")
-    async def start(self, interaction: discord.Interaction):
+    @app_commands.describe(Team_1="Дискорд-тэг твоей команды", Team_2="Дискорд-тэг команды противника")
+    async def start(self, interaction: discord.Interaction, Team_1: discord.Role, Team_2: discord.Role):
         modeView = ModesView()
-
+        print(Team_1)
         modes_embed = discord.Embed(title="Этап №1 - Выбор режима",
                                     description="***ИМЯ КОМАНДЫ С ВЫСОКИМ СИДОМ*** должна забанить 1 из 4"
                                                 " режимов нажав на сответствующую кнопку\n\n\n"
@@ -213,7 +117,6 @@ class PickBan(commands.Cog):
         modes_embed.set_image(url=
                               "https://media.discordapp.net/attachments/994356082313023560/1139622287717437600/FQ_v1XwXMAA-v8G.png?width=972&height=670")
         await interaction.response.send_message(embed=modes_embed, view=modeView)
-        # await modeView.wait()
 
 
 async def setup(bot):
