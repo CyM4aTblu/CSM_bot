@@ -26,7 +26,7 @@ class MapBanButton(discord.ui.Button):
                     self.view.bannedMapsCounter += 1
                     self.view.isBanned[self.label] = True
                     if (self.view.bannedMapsCounter == 6 or
-                            (self.view.bannedMapsCounter == 4 and self.view.Winner_in_Previous_Round != None)):
+                            (self.view.bannedMapsCounter == 4 and self.view.winner_in_previous_round != None)):
                         map_choosed_embed = discord.Embed(
                             title=f"Карта  ***{self.view.bannedMapsNumbers}***  была выбрана командой:",
                             description=f"**<@&{self.view.outsiders.id}>**",
@@ -34,9 +34,9 @@ class MapBanButton(discord.ui.Button):
                         )
                         await interaction.response.send_message(embed=map_choosed_embed)
                         self.view.stop()
-                    elif ((self.view.bannedMapsCounter == 2 or self.view.bannedMapsCounter == 5) or
-                            (self.view.bannedMapsCounter == 3 and self.view.Winner_in_Previous_Round != None)):
-                        if self.view.bannedMapsCounter == 2 or self.view.bannedMapsCounter == 3:
+                    elif ((self.view.bannedMapsCounter == 2 and self.view.winner_in_previous_round == None) or (self.view.bannedMapsCounter == 5) or
+                            (self.view.bannedMapsCounter == 3 and self.view.winner_in_previous_round != None)):
+                        if self.view.bannedMapsCounter == 2:
                             self.view.activeRole = self.view.frontRunners
                         else:
                             self.view.activeRole = self.view.outsiders
@@ -55,12 +55,17 @@ class MapBanButton(discord.ui.Button):
 
 
 class MapsView(discord.ui.View):
-    def __init__(self, outsiders, frontRunners, Winner_in_Previous_Round):
+    def __init__(self, outsiders, frontRunners, winner_in_previous_round):
         super().__init__()
         self.outsiders = outsiders
         self.frontRunners = frontRunners
         self.activeRole = outsiders
-        self.Winner_in_Previous_Round = Winner_in_Previous_Round
+        self.winner_in_previous_round = winner_in_previous_round
+        if winner_in_previous_round != None:
+            self.activeRole = winner_in_previous_round
+            if winner_in_previous_round == outsiders:
+                self.outsiders = frontRunnersd
+                self.frontRunners = outsiders
         self.add_item(MapBanButton("1", 1))
         self.add_item(MapBanButton("2", 1))
         self.add_item(MapBanButton("3", 1))
@@ -101,15 +106,22 @@ class ModeBanButton(discord.ui.Button):
             if (self.view.bannedMode != ""
                     and self.view.bannedMode != self.label
                     and interaction.user.get_role(self.view.outsiders.id)):
-                mapView = MapsView(self.view.outsiders, self.view.frontRunners, self.view.Winner_in_Previous_Round)
+                mapView = MapsView(self.view.outsiders, self.view.frontRunners, self.view.winner_in_previous_round)
                 mapView.mode = self.label
-                choose_embed = discord.Embed(title=f"{interaction.user.name} Выбрал режим:  ***{mapView.mode}***",
-                                             description=f"<@&{self.view.outsiders.id}> должна забанить 2 из 8"
+                if self.view.winner_in_previous_round != None:
+                    description_param = (f"<@&{self.view.frontRunners.id}> должна забанить 3 из 8 "
+                                         f"карт нажав на сответствующие кнопки\n\n"
+                                         f"После чего <@&{self.view.outsiders.id}>"
+                                         f" выбирает карту из 3-х оставшихся")
+                else:
+                    description_param = (f"<@&{self.view.outsiders.id}> должна забанить 2 из 8"
                                                          " карт нажав на сответствующие кнопки\n"
                                                          f"Далее <@&{self.view.frontRunners.id}>"
                                                          f" банит 3 карты из оставшихся\n"
                                                          f"После чего <@&{self.view.outsiders.id}>"
-                                                         f" выбирает карту из 3-х оставшихся",
+                                                         f" выбирает карту из 3-х оставшихся")
+                choose_embed = discord.Embed(title=f"{interaction.user.name} Выбрал режим:  ***{mapView.mode}***",
+                                             description= description_param,
                                              colour=discord.Colour.blurple())
                 choose_embed.set_image(url=mapView.imageUrls[mapView.mode])
                 await interaction.response.send_message(embed=choose_embed, view=mapView)
@@ -133,10 +145,10 @@ class ModeBanButton(discord.ui.Button):
 
 
 class ModesView(discord.ui.View):
-    def __init__(self, outsiders, frontRunners, Winner_in_Previous_Round):
+    def __init__(self, outsiders, frontRunners, winner_in_previous_round):
         super().__init__()
         self.outsiders = outsiders
-        self.Winner_in_Previous_Round = Winner_in_Previous_Round
+        self.winner_in_previous_round = winner_in_previous_round
         self.frontRunners = frontRunners
         self.add_item(ModeBanButton("Бой за Зоны"))
         self.add_item(ModeBanButton("Мегакарп"))
@@ -161,25 +173,21 @@ class PickBan(commands.Cog):
     async def on_ready(self):
         print("PickBan - online")
 
-    @app_commands.command(name="battle", description="Начать процесс выбора карты")
-    @app_commands.describe(Team_1="Дискорд-тэг твоей команды", Team_2="Дискорд-тэг команды противника",
-                           Winner_in_Previous_Round="Играли ли вы с командой противников в этом матче? \n"
-                                                    "если НЕТ - оставьте поле пустым\n"
-                                                    "если ДА - укажите Дискорд-тэг команды"
-                                                    " победившей в последнем РАУНДЕ")
-    async def battle(self, interaction: discord.Interaction,
-                     Team_1: discord.Role, Team_2: discord.Role, Winner_in_Previous_Round: discord.Role = None):
+    @app_commands.command(name="start", description="Начать процесс выбора карты")
+    @app_commands.describe(team_1="Дискорд-тэг твоей команды", team_2="Дискорд-тэг команды противника",
+                           winner_in_previous_round="Укажите Дискорд-тэг команды победившей в последнем РАУНДЕ если уже играли с этими противниками ")
+    async def start(self, interaction: discord.Interaction, team_1: discord.Role, team_2: discord.Role, winner_in_previous_round: discord.Role = None):
         for i in self.Teams:
-            if i.name == Team_1.name:
-                outsiders = Team_1
+            if i.name == team_1.name:
+                outsiders = team_1
                 seedOut = i.seed
-            elif i.name == Team_2.name:
-                frontRunners = Team_2
+            elif i.name == team_2.name:
+                frontRunners = team_2
                 seedRnrs = i.seed
-        if ((seedOut > seedRnrs and Winner_in_Previous_Round == None) or
-                (Winner_in_Previous_Round.name == outsiders.name)):
+        if ((seedOut > seedRnrs and winner_in_previous_round == None) or
+                (winner_in_previous_round == outsiders)):
             outsiders, frontRunners = frontRunners, outsiders
-        modeView = ModesView(outsiders, frontRunners, Winner_in_Previous_Round)
+        modeView = ModesView(outsiders, frontRunners, winner_in_previous_round)
         modes_embed = discord.Embed(title="Этап №1 - Выбор режима",
                                     description=f"<@&{frontRunners.id}> должна забанить 1 из 4"
                                                 " режимов нажав на сответствующую кнопку\n\n\n"
@@ -189,6 +197,6 @@ class PickBan(commands.Cog):
                               "https://media.discordapp.net/attachments/994356082313023560/1139622287717437600/FQ_v1XwXMAA-v8G.png?width=972&height=670")
         await interaction.response.send_message(embed=modes_embed, view=modeView)
 
-
+    
 async def setup(bot):
     await bot.add_cog(PickBan(bot))
