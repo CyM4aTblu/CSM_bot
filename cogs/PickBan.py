@@ -1,7 +1,10 @@
 # coding=utf-8
+from PIL import ImageDraw, Image
 import discord
 from discord.ext import commands
 from discord import app_commands
+
+EMBED_COLOR = discord.Color.from_rgb(77, 235, 229)
 
 
 class Team:
@@ -90,10 +93,10 @@ class MapsView(discord.ui.View):
 
     mode = ''
     imageUrls = {
-        "Мегакарп": "https://media.discordapp.net/attachments/1138780111416606782/1139581216518045817/rainmaker-maps-no-numbers.png?width=875&height=600",
-        "Устробол": "https://media.discordapp.net/attachments/1138780111416606782/1139581216996204544/clam-maps-no-numbers.png?width=875&height=600",
-        "Бой за Башню": "https://media.discordapp.net/attachments/1138780111416606782/1139581216744550522/tower-maps-no-numbers.png?width=832&height=582",
-        "Бой за Зоны": "https://media.discordapp.net/attachments/1138780111416606782/1139581217306574989/zone-maps-no-numbers.png?width=850&height=558"
+        "Мегакарп": "Maps_maker.png",
+        "Устробол": "Maps_clam.png",
+        "Бой за Башню": "Maps_tower.png",
+        "Бой за Зоны": "Maps_zones.png"
     }
 
 
@@ -122,23 +125,23 @@ class ModeBanButton(discord.ui.Button):
                                                          f" выбирает карту из 3-х оставшихся")
                 choose_embed = discord.Embed(title=f"{interaction.user.name} Выбрал режим:  ***{mapView.mode}***",
                                              description= description_param,
-                                             colour=discord.Colour.blurple())
-                choose_embed.set_image(url=mapView.imageUrls[mapView.mode])
-                await interaction.response.send_message(embed=choose_embed, view=mapView)
+                                             colour=EMBED_COLOR)
+                choose_embed.set_image(url="attachment://"+mapView.imageUrls[mapView.mode])
+                await interaction.response.send_message(file=discord.File(mapView.imageUrls[mapView.mode]),embed=choose_embed, view=mapView)
                 self.view.stop()
             elif self.view.bannedMode == "" and interaction.user.get_role(self.view.frontRunners.id):
                 self.view.bannedMode = self.label
-                ban_action_embed = discord.Embed(
-                    title=f"{interaction.user.name} Забанил режим:  ***{self.view.bannedMode}***",
-                    colour=discord.Colour.red())
-                await interaction.response.send_message(embed=ban_action_embed)
-            elif (self.view.bannedMode != "" and interaction.user.get_role(self.view.frontRunners.id)) or (
-                    self.view.bannedMode == "" and interaction.user.get_role(self.view.outsiders.id)):
-                await interaction.response.send_message(
-                    f"{interaction.user.name}, сейчас очередь выбирать другой команды, подожди немного!")
+                self.view.getmodespic(self.label)
+                ban_action_embed = discord.Embed(title="Этап №1 - Выбор режима",
+                                                 description=f"<@&{self.view.outsiders.id}> выбирает режим из 3-х оставшихся",
+                                                 colour=EMBED_COLOR)
+                ban_action_embed.set_image(url="attachment://Modes.png")
+                self.disabled = True
+                self.style = discord.ButtonStyle.gray
+                await interaction.response.send_message(file=discord.File("Modes.png"), view=self.view, embed=ban_action_embed)
             else:
                 await interaction.response.send_message(
-                    f"{interaction.user.name}, этот режим уже был забанен, **ITS NO USE!**")
+                    f"{interaction.user.name}, сейчас очередь выбирать другой команды, подожди немного!")
         else:
             await interaction.response.send_message(f"{interaction.user.name},"
                                                     f" ты не принадлежишь ни к одной из сражающихся команд!")
@@ -156,6 +159,23 @@ class ModesView(discord.ui.View):
         self.add_item(ModeBanButton("Устробол"))
 
     bannedMode = ""
+
+    def getmodespic(self, banned_mode=""):
+        modes = Image.open(r"images/templates/Modes.png")
+        if banned_mode == "Бой за Зоны":
+            cross = Image.open(r"images/crosses/Mode_ban_1.png")
+            modes.paste(cross, (0,0), cross)
+        elif banned_mode == "Мегакарп":
+            cross = Image.open(r"images/crosses/Mode_ban_2.png")
+            modes.paste(cross, (0,0), cross)
+        elif banned_mode == "Бой за Башню":
+            cross = Image.open(r"images/crosses/Mode_ban_3.png")
+            modes.paste(cross, (0,0), cross)
+        elif banned_mode == "Устробол":
+            cross = Image.open(r"images/crosses/Mode_ban_4.png")
+            modes.paste(cross, (0,0), cross)
+        modes.save("Modes.png")
+        return
 
 
 class PickBan(commands.Cog):
@@ -188,15 +208,14 @@ class PickBan(commands.Cog):
                 (winner_in_previous_round == outsiders)):
             outsiders, frontRunners = frontRunners, outsiders
         modeView = ModesView(outsiders, frontRunners, winner_in_previous_round)
+        modeView.getmodespic()
         modes_embed = discord.Embed(title="Этап №1 - Выбор режима",
                                     description=f"<@&{frontRunners.id}> должна забанить 1 из 4"
-                                                " режимов нажав на сответствующую кнопку\n\n\n"
-                                                f"После чего <@&{outsiders.id}> выбирает режим из 3-х оставшихся",
-                                    colour=discord.Colour.gold())
-        modes_embed.set_image(url=
-                              "https://media.discordapp.net/attachments/994356082313023560/1139622287717437600/FQ_v1XwXMAA-v8G.png?width=972&height=670")
-        await interaction.response.send_message(embed=modes_embed, view=modeView)
+                                                " режимов нажав на сответствующую кнопку\n\n\n",
+                                    colour=EMBED_COLOR)
+        modes_embed.set_image(url="attachment://Modes.png")
+        await interaction.response.send_message(file=discord.File("Modes.png"),embed=modes_embed, view=modeView)
 
-    
+
 async def setup(bot):
     await bot.add_cog(PickBan(bot))
