@@ -28,25 +28,34 @@ class MapBanButton(discord.ui.Button):
                     self.view.bannedMapsNumbers += " [" + self.label + "] "
                     self.view.bannedMapsCounter += 1
                     self.view.isBanned[self.label] = True
+                    self.disabled = True
+                    self.style = discord.ButtonStyle.gray
+                    self.view.getmapspic()
                     if (self.view.bannedMapsCounter == 6 or
                             (self.view.bannedMapsCounter == 4 and self.view.winner_in_previous_round != None)):
                         map_choosed_embed = discord.Embed(
                             title=f"Карта  ***{self.view.bannedMapsNumbers}***  была выбрана командой:",
                             description=f"**<@&{self.view.outsiders.id}>**",
-                            color=discord.Color.dark_teal()
+                            color=EMBED_COLOR
                         )
-                        await interaction.response.send_message(embed=map_choosed_embed)
+                        map_choosed_embed.set_image(url="attachment://Win.png")
+                        await interaction.response.send_message(file=discord.File("Win.png"), embed=map_choosed_embed)
                         self.view.stop()
-                    elif ((self.view.bannedMapsCounter == 2 and self.view.winner_in_previous_round == None) or (self.view.bannedMapsCounter == 5) or
-                            (self.view.bannedMapsCounter == 3 and self.view.winner_in_previous_round != None)):
-                        if self.view.bannedMapsCounter == 2:
+                    else:
+                        discr = f"Очередь команды **<@&{self.view.activeRole.id}>** забанитть очередную карту!"
+                        if self.view.bannedMapsCounter == 2 and self.view.winner_in_previous_round == None:
                             self.view.activeRole = self.view.frontRunners
-                        else:
+                            discr = f"Очередь команды **<@&{self.view.activeRole.id}>** забанитть очередную карту!"
+                        elif ((self.view.bannedMapsCounter == 3 and self.view.winner_in_previous_round != None) or
+                              (self.view.bannedMapsCounter == 5)):
                             self.view.activeRole = self.view.outsiders
+                            discr = f"Очередь команды **<@&{self.view.activeRole.id}>** выбрать карту из оствшихся!"
                         maps_banned_embed = discord.Embed(
                             title=f"{interaction.user.name} Забанил карты:  ***{self.view.bannedMapsNumbers}***",
-                            colour=discord.Colour.red())
-                        await interaction.response.send_message(embed=maps_banned_embed)
+                            description=discr,
+                            colour=EMBED_COLOR)
+                        maps_banned_embed.set_image(url="attachment://"+self.view.imageUrls[self.view.mode])
+                        await interaction.response.send_message(file=discord.File(self.view.imageUrls[self.view.mode]), embed=maps_banned_embed, view=self.view)
                         self.view.bannedMapsNumbers = ""
                     await interaction.response.edit_message(view=self.view)
             else:
@@ -100,6 +109,21 @@ class MapsView(discord.ui.View):
     }
 
 
+    def getmapspic(self):
+        end_path = self.imageUrls[self.mode]
+        start_path = "images/templates/" + end_path
+        maps = Image.open(start_path)
+        for i in range(1,9):
+            ind = str(i)
+            if self.isBanned[ind]:
+                cross = Image.open("images/crosses/Maps_ban_" + ind + ".png")
+                maps.paste(cross, (0, 0), cross)
+        numbers = Image.open(r"images/templates/Mode_numbers.png")
+        maps.paste(numbers, (0, 0), numbers)
+        maps.save(end_path)
+
+
+
 class ModeBanButton(discord.ui.Button):
     def __init__(self, label):
         super().__init__(label=label, style=discord.ButtonStyle.green)
@@ -111,6 +135,7 @@ class ModeBanButton(discord.ui.Button):
                     and interaction.user.get_role(self.view.outsiders.id)):
                 mapView = MapsView(self.view.outsiders, self.view.frontRunners, self.view.winner_in_previous_round)
                 mapView.mode = self.label
+                mapView.getmapspic()
                 if self.view.winner_in_previous_round != None:
                     description_param = (f"<@&{self.view.frontRunners.id}> должна забанить 3 из 8 "
                                          f"карт нажав на сответствующие кнопки\n\n"
@@ -164,15 +189,13 @@ class ModesView(discord.ui.View):
         modes = Image.open(r"images/templates/Modes.png")
         if banned_mode == "Бой за Зоны":
             cross = Image.open(r"images/crosses/Mode_ban_1.png")
-            modes.paste(cross, (0,0), cross)
         elif banned_mode == "Мегакарп":
             cross = Image.open(r"images/crosses/Mode_ban_2.png")
-            modes.paste(cross, (0,0), cross)
         elif banned_mode == "Бой за Башню":
             cross = Image.open(r"images/crosses/Mode_ban_3.png")
-            modes.paste(cross, (0,0), cross)
         elif banned_mode == "Устробол":
             cross = Image.open(r"images/crosses/Mode_ban_4.png")
+        if banned_mode != "":
             modes.paste(cross, (0,0), cross)
         modes.save("Modes.png")
         return

@@ -15,6 +15,10 @@ class ChatCommands(commands.Cog):
     async def hello(self, ctx):
         await ctx.send("Здарова, щегол!")
 
+    @commands.hybrid_command()
+    async def secrets(self, ctx):
+        await ctx.send("Меня написал в соло 1 чел за 3.5 дня, сидя по 10-12 часов в день")
+
     @app_commands.command(name="square", description="powers int into a square")
     async def square(self, interaction: discord.Interaction, number: int):
         await interaction.response.send_message(number**2)
