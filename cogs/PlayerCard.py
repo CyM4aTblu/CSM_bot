@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
 
-
+# конепт карточки игрока, которую он создает и при желании может
+# вызвать карточку люого игрока и почитать о нем и его статистике
 class PlayerCard(commands.Cog):
     def __init__(self, bot):
         self.bot = bot

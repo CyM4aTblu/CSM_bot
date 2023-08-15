@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-
+# концепт каточки команды, идея аналогична с карточкой игрока
 """
 class Team:
     def __init__(self, _name, players, repacePlayers, discordNames, role, iconUrl):

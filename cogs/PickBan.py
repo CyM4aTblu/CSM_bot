@@ -20,11 +20,14 @@ class MapBanButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.get_role(self.view.outsiders.id) or interaction.user.get_role(self.view.frontRunners.id):
+            # проерка принадлежности к одной из 2х команд
             if interaction.user.get_role(self.view.activeRole.id):
+                # проверка на принадлежность к команде, чья сейчас очередь выирать карты
                 if self.view.isBanned[self.label] == True:
                     await interaction.response.send_message(f"***Карта  [{self.label}]  уже была ЗАБАНЕНА***\n"
-                                                            f"выберите другую карту")
+                                                            f"выберите другую карту", ephemeral=True)
                 else:
+                    # процедура бана карты и обновленя картинки
                     self.view.bannedMapsNumbers += " [" + self.label + "] "
                     self.view.bannedMapsCounter += 1
                     self.view.isBanned[self.label] = True
@@ -33,6 +36,7 @@ class MapBanButton(discord.ui.Button):
                     self.view.getmapspic()
                     if (self.view.bannedMapsCounter == 6 or
                             (self.view.bannedMapsCounter == 4 and self.view.winner_in_previous_round != None)):
+                        # выбор карты
                         map_choosed_embed = discord.Embed(
                             title=f"Карта  ***{self.view.bannedMapsNumbers}***  была выбрана командой:",
                             description=f"**<@&{self.view.outsiders.id}>**",
@@ -42,6 +46,7 @@ class MapBanButton(discord.ui.Button):
                         await interaction.response.send_message(file=discord.File("Win.png"), embed=map_choosed_embed)
                         self.view.stop()
                     else:
+                        #  бан карты
                         discr = f"Очередь команды **<@&{self.view.activeRole.id}>** забанитть очередную карту!"
                         if self.view.bannedMapsCounter == 2 and self.view.winner_in_previous_round == None:
                             self.view.activeRole = self.view.frontRunners
@@ -60,10 +65,12 @@ class MapBanButton(discord.ui.Button):
                     await interaction.response.edit_message(view=self.view)
             else:
                 await interaction.response.send_message(
-                    f"{interaction.user.name}, сейчас очередь выбирать другой команды, подожди немного!")
+                    f"{interaction.user.name}, сейчас очередь выбирать другой команды, подожди немного!",
+                    ephemeral=True)
         else:
             await interaction.response.send_message(f"{interaction.user.name},"
-                                                    f" ты не принадлежишь ни к одной из сражающихся команд!")
+                                                    f" ты не принадлежишь ни к одной из сражающихся команд!",
+                                                    ephemeral=True)
 
 
 class MapsView(discord.ui.View):
@@ -109,7 +116,7 @@ class MapsView(discord.ui.View):
     }
 
 
-    def getmapspic(self):
+    def getmapspic(self):  # функция редакирования картинки с картами
         end_path = self.imageUrls[self.mode]
         start_path = "images/templates/" + end_path
         maps = Image.open(start_path)
@@ -130,9 +137,11 @@ class ModeBanButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         if interaction.user.get_role(self.view.outsiders.id) or interaction.user.get_role(self.view.frontRunners.id):
+            # проерка принадлежности к одной из 2х команд
             if (self.view.bannedMode != ""
                     and self.view.bannedMode != self.label
                     and interaction.user.get_role(self.view.outsiders.id)):
+                # проерка на то, не был ли забанен режим
                 mapView = MapsView(self.view.outsiders, self.view.frontRunners, self.view.winner_in_previous_round)
                 mapView.mode = self.label
                 mapView.getmapspic()
@@ -166,10 +175,12 @@ class ModeBanButton(discord.ui.Button):
                 await interaction.response.send_message(file=discord.File("Modes.png"), view=self.view, embed=ban_action_embed)
             else:
                 await interaction.response.send_message(
-                    f"{interaction.user.name}, сейчас очередь выбирать другой команды, подожди немного!")
+                    f"{interaction.user.name}, сейчас очередь выбирать другой команды, подожди немного!"
+                    , ephemeral=True)
         else:
             await interaction.response.send_message(f"{interaction.user.name},"
-                                                    f" ты не принадлежишь ни к одной из сражающихся команд!")
+                                                    f" ты не принадлежишь ни к одной из сражающихся команд!",
+                                                    ephemeral=True)
 
 
 class ModesView(discord.ui.View):
@@ -185,7 +196,7 @@ class ModesView(discord.ui.View):
 
     bannedMode = ""
 
-    def getmodespic(self, banned_mode=""):
+    def getmodespic(self, banned_mode=""):# функция динамического изменения картинки с режимами
         modes = Image.open(r"images/templates/Modes.png")
         if banned_mode == "Бой за Зоны":
             cross = Image.open(r"images/crosses/Mode_ban_1.png")
@@ -205,6 +216,7 @@ class PickBan(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    # бд команд с их сидингами
     Teams = [
         Team("Sync", 1, 2),
         Team("Чай", 2, 3),
@@ -218,27 +230,32 @@ class PickBan(commands.Cog):
 
     @app_commands.command(name="start", description="Начать процесс выбора карты")
     @app_commands.describe(team_1="Дискорд-тэг твоей команды", team_2="Дискорд-тэг команды противника",
-                           winner_in_previous_round="Укажите Дискорд-тэг команды победившей в последнем РАУНДЕ если уже играли с этими противниками ")
-    async def start(self, interaction: discord.Interaction, team_1: discord.Role, team_2: discord.Role, winner_in_previous_round: discord.Role = None):
-        for i in self.Teams:
-            if i.name == team_1.name:
-                outsiders = team_1
-                seedOut = i.seed
-            elif i.name == team_2.name:
-                frontRunners = team_2
-                seedRnrs = i.seed
-        if ((seedOut > seedRnrs and winner_in_previous_round == None) or
-                (winner_in_previous_round == outsiders)):
-            outsiders, frontRunners = frontRunners, outsiders
-        modeView = ModesView(outsiders, frontRunners, winner_in_previous_round)
-        modeView.getmodespic()
-        modes_embed = discord.Embed(title="Этап №1 - Выбор режима",
-                                    description=f"<@&{frontRunners.id}> должна забанить 1 из 4"
-                                                " режимов нажав на сответствующую кнопку\n\n\n",
-                                    colour=EMBED_COLOR)
-        modes_embed.set_image(url="attachment://Modes.png")
-        await interaction.response.send_message(file=discord.File("Modes.png"),embed=modes_embed, view=modeView)
-
-
+                           last_winner="Укажите Дискорд-тэг команды одержавшей победу в прошлом БОЮ [НЕ ПРИМЕНИМО К ПЕРВОМУ БОЮ В СЭТЕ]")
+    async def start(self, interaction: discord.Interaction, team_1: discord.Role, team_2: discord.Role, last_winner: discord.Role = None):
+        if interaction.user.get_role(team_1.id) or interaction.user.get_role(team_2.id):
+            # проерка принадлежности к одной из 2х команд
+            for i in self.Teams:
+                if i.name == team_1.name:
+                    outsiders = team_1
+                    seedOut = i.seed
+                elif i.name == team_2.name:
+                    frontRunners = team_2
+                    seedRnrs = i.seed
+            if ((seedOut > seedRnrs and last_winner == None) or
+                    (last_winner == outsiders)):
+                outsiders, frontRunners = frontRunners, outsiders
+            # процедура определения команды аутсайдера и фаворита ^
+            modeView = ModesView(outsiders, frontRunners, last_winner)
+            modeView.getmodespic()
+            modes_embed = discord.Embed(title="Этап №1 - Выбор режима",
+                                        description=f"<@&{frontRunners.id}> должна забанить 1 из 4"
+                                                    " режимов нажав на сответствующую кнопку\n\n\n",
+                                        colour=EMBED_COLOR)
+            modes_embed.set_image(url="attachment://Modes.png")
+            await interaction.response.send_message(file=discord.File("Modes.png"),embed=modes_embed, view=modeView)
+        else:
+            await interaction.response.send_message(f"Ты не состоишь ни в одной из этих 2-х команд,"
+                                                    f" ***{interaction.user.name}***!\nНи к  <@&{team_1.id}>,"
+                                                    f" ни к <@&{team_2.id}>", ephemeral=True)
 async def setup(bot):
     await bot.add_cog(PickBan(bot))

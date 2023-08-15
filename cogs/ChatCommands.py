@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-
+# файл с демо командами на которых я учился с ними работать
 class ChatCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
